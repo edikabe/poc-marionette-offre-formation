@@ -1,0 +1,22 @@
+{
+  "name": "offres-formations",
+  "version": "0.0.0",
+  "authors": [
+    "Julien GLOTAIN <jglotain@gmail.com>"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "marionette": "~1.4.1",
+    "jquery": "~2.0.3",
+    "bootstrap": "~3.0.3",
+    "underscore": "~1.5.2",
+    "backbone": "~1.1.0"
+  }
+}

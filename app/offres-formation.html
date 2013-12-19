@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>marionette playground</title>
+
+	<link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.min.css">
+
+	<script src="bower_components/jquery/jquery.js"></script>
+	<script src="bower_components/underscore/underscore.js"></script>
+	<script src="bower_components/backbone/backbone.js"></script>
+	<script src="bower_components/marionette/lib/backbone.marionette.js"></script>
+
+	<style>
+		
+		#container {
+			width: 800px;
+			margin: 0 auto;
+		}
+
+		#main {
+			margin-top: 60px;
+			border: 1px solid rgba(0,0,0,.3);
+		}
+
+	</style>
+
+</head>
+<body>
+	
+
+	<div id="container">
+		<div id="header">
+			<header class="navbar navbar-fixed-top bs-docs-nav" role="banner">
+			  <div class="container">
+			    <nav class="collapse navbar-collapse bs-navbar-collapse" role="navigation">
+			      <ul class="nav navbar-nav">
+			        <li>
+			         	<a href="index.html">index</a>
+			        </li>
+			        <li>
+			        	<a href="offres-formation.html">offres de formation</a>
+			        </li>
+			          
+			      </ul>
+			    </nav>
+			  </div>
+			</header>
+		</div>	
+		<div id="main"></div>
+		<div id="footer"></div>
+	</div>
+
+	<script id="main-layout-template" type="text/template">
+		<div id="shareable-region" style="border: 1px solid rgba(0,0,0,.3); width: 100%;">
+		</div>
+	</script>
+	
+	<script id="presentation-generale-view-template" type="text/template">
+		<div class="row">
+			<div class="col-md-8" style="border-right: 1px solid rgba(0,0,0,.3);">
+				<h5>presentation generale ...</h5>
+				<p>
+					blablabla ... 
+					<ul>
+						<li><a href="#thematique/1">thematique 1</a></li>
+						<li><a href="#thematique/2">thematique 2</a></li>
+						<li><a href="#thematique/3">thematique 3</a></li>
+					</ul>
+				</p>
+			</div>
+			<div class="col-md-4">
+				<section id="calendrier-annuel-formations-region"></section>
+				<section>Lieux des formations</section>
+				<section>Financement de la formation</section>
+			</div>
+		</div>
+	</script>
+
+	<script id="calendrier-formations-view-template" type="text/template">
+		<h6>Calendrier des formations</h6>
+	</script>
+	
+
+	<script id="presentation-thematiques-formation-layout-template" type="text/template">
+		<div class="row">
+			<div id="navigation-thematiques-formations-region" class="col-md-4" style="border-right: 1px solid rgba(0,0,0,.3);min-height: 300px;"></div>
+			<div id="details-thematique-region" class="col-md-8"></div>
+		</div>
+	</script>
+
+	<script id="navigation-thematiques-formations-view-template" type="text/template">
+		<h5>Rappel de la navigation</h5>
+		<ul>
+			<li><a href="#thematique/1">thematique 1</a></li>
+			<li><a href="#thematique/2">thematique 2</a></li>
+			<li><a href="#thematique/3">thematique 3</a></li>
+		</ul>
+	</script>
+
+	<script id="presentation-details-thematique-view-template" type="text/template">
+		<h4>Infos sur la thématique</h4>
+		id: <%= id %> <br/>
+		nom: <%= nom %> <br/>
+	</script>
+
+
+	<script>
+
+		var OffresFormationApp = (function(){
+
+			var App = new Marionette.Application();
+
+			// main regions
+			App.addRegions({
+				"mainRegion": "#main" 
+			});
+
+			App.Router = Marionette.AppRouter.extend({
+				appRoutes: {
+					"": "showRecapOffres",
+					"thematique/:code": "showThematique"
+				}
+			});
+
+			App.API = {
+    			"showRecapOffres": function(){
+    				App.RecapOffres.trigger('show');
+    			},
+    			"showThematique": function(code){
+    				App.PresentationThematique.trigger('show',code);
+    			}
+    		};
+
+			App.module('Entites',function(Entites, App){
+
+				Entites.Thematique  = Backbone.Model.extend({
+					initialize: function(options){
+						_.extend(this,options);
+					},
+					url: '/data/thematiques.json',
+					parse: function(data){
+						var self = this;
+						return _.find(data.thematiques,function(thematique){
+							return self.idThematique == thematique.id;
+						});
+					}
+				});
+
+				Entites.ThematiquesFormations = Backbone.Collection.extend({
+					url: '/data/thematiques.json',
+					filterByCible: function(cible){
+						return getByCible(this.toJSON(), cible);
+					},
+					parse: function(data){
+						return data.thematiques;
+					}
+				});
+
+				Entites.API = {
+					getThematiqueDetails: function(id){
+						console.log(id)
+						var thematique = new Entites.Thematique({idThematique: id});
+						var defer = $.Deferred();
+						thematique.fetch({
+							success: function(data){
+								defer.resolve(data);
+							}
+						});
+						return defer.promise();
+					}
+				};
+
+				App.reqres.setHandler("thematiques:getById", function(id){
+					return Entites.API.getThematiqueDetails(id);
+				});
+
+			});
+			
+			App.module('RecapOffres',function(RecapOffres, App){
+
+				RecapOffres.Layout = Marionette.Layout.extend({
+					template: "#presentation-generale-view-template",
+					regions: {
+						"calendrierAnnuelFormationsRegion": "#calendrier-annuel-formations-region"
+					}
+				});
+
+				RecapOffres.Views = {};
+
+				RecapOffres.Views.CalendrierFormations = Marionette.ItemView.extend({
+					template: "#calendrier-formations-view-template"
+				});
+
+				RecapOffres.API = {
+					show: function(){
+
+						var layout = new RecapOffres.Layout();
+
+						App.mainRegion.show( layout );
+
+						layout.calendrierAnnuelFormationsRegion.show(new RecapOffres.Views.CalendrierFormations());
+						
+					}
+				}
+
+				RecapOffres.on('show', RecapOffres.API.show);
+
+			});
+
+			
+			App.module('PresentationThematique',function(PresentationThematique, App){
+
+				PresentationThematique.Layout = Marionette.Layout.extend({
+					template: "#presentation-thematiques-formation-layout-template",
+					regions: {
+						"navigationThematiquesFormationsRegion": "#navigation-thematiques-formations-region",
+						"detailsThematiqueRegion": "#details-thematique-region"
+					}
+				});
+
+				PresentationThematique.Views = {};
+
+				PresentationThematique.Views.NavigationThematiquesFormationsView = Marionette.ItemView.extend({
+					template: "#navigation-thematiques-formations-view-template"
+				});
+
+				PresentationThematique.Views.PresentationDetailsThematique = Marionette.ItemView.extend({
+					template: "#presentation-details-thematique-view-template"
+				});
+
+				PresentationThematique.API = {
+					show: function(code){
+
+						var layout = new PresentationThematique.Layout();
+
+						App.mainRegion.show( layout );
+
+						layout.navigationThematiquesFormationsRegion.show(new PresentationThematique.Views.NavigationThematiquesFormationsView());
+
+						var promise = App.request('thematiques:getById',code);
+
+						$.when(promise).done(function(model){
+
+							layout.detailsThematiqueRegion.show(new PresentationThematique.Views.PresentationDetailsThematique({model: model}));	
+						});
+						
+					}
+				}
+
+				PresentationThematique.on('show', PresentationThematique.API.show);
+
+			});
+	
+
+			App.addInitializer(function(){
+
+				new App.Router({
+					controller: App.API
+				});
+
+				if(Backbone.history){
+					Backbone.history.start();
+				}
+
+			});
+
+			return App;
+
+		})();
+
+		OffresFormationApp.start();
+
+
+	</script>
+
+</body>
+</html>
