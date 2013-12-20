@@ -1,4 +1,4 @@
 poc-marionette-offre-formation
 ==============================
 
-simple poc for discovering Backbone.Marionette
+simple poc helping me for discovering Backbone.Marionette
